@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from pydantic import ValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -185,6 +186,11 @@ async def prepare_dataset(
 
     try:
         plan = plan_with_claude(prompt)
+    except ValidationError as exc:
+        raise HTTPException(
+            502,
+            detail=f"План от LLM не прошёл проверку схемы (часто params в custom_validation): {exc}",
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(502, detail=f"LLM недоступен или неверный JSON: {exc}") from exc
 

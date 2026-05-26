@@ -126,7 +126,7 @@ def planner_prompt(
 - cast_columns: приведите к осмысленным типам; даты как datetime64[ns].
 - binning: добавь только для нескольких важных непрерывных признаков; output_column суффикс _binned; labels — опционально: если задан массив той же длины, подставляется как есть; если null, в CSV пишутся номера групп 1…K по порядку интервалов (а не строки вида «(653.5, 682.0]»).
 - Не включай колонку-цель в список на удаление, если она есть — определи по контексту имя возможной колонки target и упомянь в validation_notes если неясно.
-- custom_validation: правила с полями column, rule (must_be_numeric|must_be_integer|must_be_datetime|date_year_min|date_year_max|numeric_min|numeric_max|string_length_min|string_length_max|regex_extract_digits|regex_extract|regex_replace|regex_must_match|not_null|allowed_values|unique), params, on_fail (null|drop_row|keep). Исполнитель применит их детерминированно.
+- custom_validation: правила с полями column, rule (must_be_numeric|must_be_integer|must_be_datetime|date_year_min|date_year_max|numeric_min|numeric_max|string_length_min|string_length_max|regex_extract_digits|regex_extract|regex_replace|regex_must_match|not_null|allowed_values|unique), params, on_fail (null|drop_row|keep). Для allowed_values в params указывай values как массив строк, напр. ["0","1"], не allowed и не числа.
 - Если пользователь дал ОПИСАНИЕ КОЛОНОК — используй смысл полей при выборе cast_columns, fill_na и validation_notes.
 - Для пресета credit_transition_matrix: обязательно заполни transition_matrix (корзина, период, макрофакторы, feature_transforms с qoq_abs/qoq_rel/log/zscore) и econometric_notes.
 

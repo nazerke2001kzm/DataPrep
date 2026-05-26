@@ -1,8 +1,8 @@
 """Plan emitted by the model; executor applies it deterministically."""
 
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class FillNa(BaseModel):
@@ -76,9 +76,24 @@ class ValidationRule(BaseModel):
 
     column: str = Field(..., min_length=1, max_length=200)
     rule: ValidationRuleKind
-    params: dict[str, str | int | float | bool | list[str]] = Field(default_factory=dict)
+    params: dict[str, Any] = Field(default_factory=dict)
     on_fail: Literal["null", "drop_row", "keep"] = "null"
     note: str = Field(default="", max_length=500)
+
+    @field_validator("params", mode="after")
+    @classmethod
+    def normalize_allowed_values_params(cls, v: dict[str, Any], info) -> dict[str, Any]:
+        if info.data.get("rule") != "allowed_values":
+            return v
+        raw = v.get("values", v.get("allowed"))
+        if raw is None:
+            return v
+        if not isinstance(raw, list):
+            raw = [raw]
+        out = dict(v)
+        out["values"] = [str(x) for x in raw]
+        out.pop("allowed", None)
+        return out
 
 
 class UserDatasetGuidance(BaseModel):
