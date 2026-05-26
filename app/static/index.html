@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Подготовка данных для ML</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2322d3ee'/%3E%3Cpath fill='%230f172a' d='M8 12h5v10H8V12zm11-2a6 6 0 100 12 6 6 0 000-12z'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/static/app.css?v=5" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="glow glow-1" aria-hidden="true"></div>
+    <div class="glow glow-2" aria-hidden="true"></div>
+
+    <header class="top">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        <div>
+          <h1>DataPrep</h1>
+          <p class="tagline">Валидация, очистка и биннинг — готовый CSV для модели</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="link" href="/docs" target="_blank" rel="noopener">Swagger</a>
+        <a class="link" href="/redoc" target="_blank" rel="noopener">ReDoc</a>
+        <a class="link" href="/health" target="_blank" rel="noopener">Health</a>
+      </nav>
+    </header>
+
+    <main class="layout-shell">
+      <aside class="sidebar-nav card" id="presetSidebar" aria-label="Тип модели для обработки файла">
+        <p class="sidebar-heading">Тип модели</p>
+        <div class="sidebar-tabs" role="tablist" aria-orientation="vertical">
+          <button type="button" class="sidebar-tab active" role="tab" aria-selected="true" data-preset="antifraud" id="tab-antifraud">
+            <span class="sidebar-tab-title">Антифрод</span>
+            <span class="sidebar-tab-note">События и транзакции</span>
+          </button>
+          <button type="button" class="sidebar-tab" role="tab" aria-selected="false" data-preset="legal_entity_scoring" id="tab-legal">
+            <span class="sidebar-tab-title">Скоринг юрлиц</span>
+            <span class="sidebar-tab-note">Отчётность и контрагент</span>
+          </button>
+          <button type="button" class="sidebar-tab" role="tab" aria-selected="false" data-preset="individual_scoring" id="tab-individual">
+            <span class="sidebar-tab-title">Скоринг физлиц</span>
+            <span class="sidebar-tab-note">Заявки и PD физлиц</span>
+          </button>
+          <button type="button" class="sidebar-tab" role="tab" aria-selected="false" data-preset="credit_transition_matrix" id="tab-matrix">
+            <span class="sidebar-tab-title">Матрица переходов</span>
+            <span class="sidebar-tab-note">Миграция по корзинам</span>
+          </button>
+        </div>
+        <div class="sidebar-footer">
+          <p class="preset-hint muted fineprint" id="presetHint">
+            Транзакции и события: антиутечки по времени, дубликаты операций, аккуратная работа с суммами.
+          </p>
+        </div>
+      </aside>
+
+      <div class="content-main">
+      <section class="card workspace" aria-label="Загрузка файла и диалог">
+        <header class="workspace-header">
+          <h2 class="workspace-title">Файл и агент</h2>
+          <p class="workspace-lead muted fineprint">
+            После выбора файла показывается превью: колонки, число строк, первые строки и пропуски. Чат не видит содержимое таблицы; готовый CSV только после «Обработать».
+          </p>
+        </header>
+
+        <div class="workspace-body">
+          <div class="workspace-upload">
+            <p class="workspace-col-label">Загрузка и обработка</p>
+            <div class="dropzone" id="dropzone" tabindex="0">
+              <input type="file" id="file" accept=".csv,.xlsx,.xlsm" hidden />
+              <div class="drop-inner">
+                <div class="drop-icon" aria-hidden="true">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 16V4m0 0l4 4m-4-4L8 8" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M4 15v2a3 3 0 003 3h10a3 3 0 003-3v-2" stroke-linecap="round" />
+                  </svg>
+                </div>
+                <p class="drop-title">Перетащите файл сюда</p>
+                <p class="drop-hint">или <button type="button" class="text-btn" id="pick">выберите .csv / .xlsx</button></p>
+                <p class="file-name" id="fileName" hidden></p>
+              </div>
+            </div>
+
+            <div id="dataPreview" class="data-preview is-hidden" aria-live="polite">
+              <p class="workspace-col-label">Превью данных</p>
+              <p id="previewStatus" class="preview-status muted fineprint"></p>
+              <div id="previewMeta" class="preview-meta"></div>
+              <div id="previewNullsWrap" class="preview-nulls-wrap" hidden>
+                <p class="preview-subheading">Пропуски по колонкам</p>
+                <div class="preview-table-scroller preview-nulls-scroller">
+                  <table class="preview-table preview-nulls-table" id="previewNullsTable">
+                    <thead>
+                      <tr>
+                        <th>Колонка</th>
+                        <th>Пустых</th>
+                        <th>%</th>
+                      </tr>
+                    </thead>
+                    <tbody id="previewNullsBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <p id="previewSampleLabel" class="preview-subheading" hidden>Первые строки</p>
+              <div class="preview-table-scroller preview-sample-scroller" id="previewSampleScroller" hidden>
+                <table class="preview-table preview-sample-table" id="previewSampleTable">
+                  <thead id="previewSampleHead"></thead>
+                  <tbody id="previewSampleBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <section class="guidance-panel card-inset" id="guidancePanel" aria-label="Описание колонок и правила валидации">
+              <div class="guidance-head">
+                <div>
+                  <p class="workspace-col-label">Справочник колонок и валидация</p>
+                  <p class="muted fineprint">
+                    Опишите непонятные поля и задайте правила (тип, даты, длина ID, regex). Учитываются при планировании ИИ и применяются к данным — для всех пресетов.
+                  </p>
+                </div>
+              </div>
+
+              <label class="guidance-freeform-label">
+                <span class="workspace-col-label">Описание колонок (текст для ИИ)</span>
+                <textarea
+                  id="columnDescriptionsText"
+                  class="guidance-textarea"
+                  rows="4"
+                  placeholder="По строке или абзацу на поле, например: client_id — внутренний ID; birth_dt — дата рождения; GDD_Min_R — РВДС горнодобычи, млрд тенге."
+                ></textarea>
+                <button type="button" class="btn ghost btn-small guidance-sync-btn" id="guidanceSyncCols" title="Добавить имена колонок из превью">
+                  Подставить имена из превью
+                </button>
+              </label>
+
+              <details class="guidance-details" open>
+                <summary>Правила проверки</summary>
+                <div id="validationRulesList" class="guidance-rows"></div>
+                <button type="button" class="btn ghost btn-small" id="addRuleRow">+ Правило</button>
+                <p class="muted fineprint guidance-hint">
+                  Примеры: must_be_numeric, date_year_min (год ≥ 1920), string_length_max, regex_extract_digits.
+                </p>
+              </details>
+
+              <label class="guidance-freeform-label">
+                <span class="workspace-col-label">Дополнительные требования (текст для ИИ)</span>
+                <textarea
+                  id="freeformInstructions"
+                  class="guidance-textarea"
+                  rows="3"
+                  placeholder="Например: client_id — не использовать в модели; transaction_amount в тенге."
+                ></textarea>
+              </label>
+            </section>
+
+            <div class="options">
+              <label class="switch">
+                <input type="checkbox" id="previewOnly" />
+                <span class="switch-ui"></span>
+                <span class="switch-text">Только план (JSON), без скачивания файла</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="bundle" />
+                <span class="switch-ui"></span>
+                <span class="switch-text">ZIP: CSV + report.json</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="docxReport" disabled />
+                <span class="switch-ui"></span>
+                <span class="switch-text">Добавить отчёт Word (графики, IV / KS / Gini, WoE)</span>
+              </label>
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn primary" id="run" disabled>
+                <span class="btn-label">Обработать</span>
+                <span class="btn-spinner" id="spinner" hidden></span>
+              </button>
+              <button type="button" class="btn ghost" id="reset">Сброс</button>
+            </div>
+
+          </div>
+
+          <div class="workspace-chat" aria-labelledby="chat-heading">
+            <div class="chat-head">
+              <div>
+                <h3 id="chat-heading" class="chat-title">Диалог с агентом</h3>
+                <p class="chat-sub">Очистка, валидация, фичи, утечки, метрики — спрашивайте текстом.</p>
+                <p class="chat-context-hint muted fineprint" id="chatContextHint" hidden></p>
+              </div>
+              <button type="button" class="btn ghost btn-small" id="chatClear" title="Очистить историю">Очистить чат</button>
+            </div>
+            <div class="chat-log" id="chatLog" role="log" aria-live="polite">
+              <div class="chat-msg assistant chat-intro" id="chatIntro">
+                <span class="chat-role">Агент</span>
+                <div class="chat-bubble">
+                  После «Обработать» под заголовком появится подсказка: ответы будут опираться на план и лог последней обработки. Сырые строки таблицы в чат не попадают — только метаданные и шаги пайплайна.
+                </div>
+              </div>
+            </div>
+            <div class="chat-compose">
+              <label class="sr-only" for="chatInput">Сообщение агенту</label>
+              <textarea id="chatInput" class="chat-input" rows="4" placeholder="Например: как лучше заполнить пропуски в категориальных колонках?" maxlength="16000"></textarea>
+              <div class="chat-compose-actions">
+                <span class="chat-hint muted fineprint">Ctrl+Enter — отправить</span>
+                <button type="button" class="btn primary" id="chatSend">
+                  <span id="chatSendLabel">Отправить</span>
+                  <span class="btn-spinner" id="chatSpinner" hidden></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card panel panel-full" id="panel" hidden>
+        <div class="panel-head">
+          <h2 id="panelTitle">Результат</h2>
+          <button type="button" class="icon-btn" id="closePanel" title="Закрыть">&times;</button>
+        </div>
+        <div id="alert" class="alert" hidden></div>
+        <div id="jsonOut" class="json-wrap" hidden>
+          <pre id="jsonPre" class="json-pre"></pre>
+        </div>
+        <div id="downloadRow" class="download-row" hidden>
+          <p class="ok-msg" id="okMsg"></p>
+          <a class="btn primary" id="downloadLink" href="#" download>Повторное скачивание</a>
+        </div>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span>FastAPI · Claude-планирование · pandas-применение</span>
+    </footer>
+
+    <script src="/static/app.js?v=5" defer></script>
+  </body>
+</html>

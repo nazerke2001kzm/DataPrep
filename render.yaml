@@ -1,0 +1,13 @@
+# Деплой на https://render.com — после push в GitHub: Dashboard → New → Blueprint
+services:
+  - type: web
+    name: dataset-prep-agent
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5-20251001
+    autoDeploy: true
